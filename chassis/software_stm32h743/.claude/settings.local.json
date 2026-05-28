@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C \"C:\\\\Users\\\\Admin\\\\Desktop\\\\PV-Robotics\\\\distributed-pv-auto-cleaner\\\\chassis\\\\software_stm32h743\" show HEAD:../Chassis-motor-driver-c8t6/Core/Src/main.c)",
+      "Bash(\"/c/Users/Admin/AppData/Local/stm32cube/bundles/ninja/1.13.2+st.1/bin/ninja.exe\")",
+      "Bash(cmake *)",
+      "Read(//c/Program Files/CMake/bin/**)",
+      "Read(//c/Program Files \\(x86\\)/CMake/bin/**)",
+      "Read(//c/Users/Admin/AppData/Local/Programs/**)",
+      "Read(//c/Users/Admin/**)",
+      "Bash(C:/Users/Admin/AppData/Local/stm32cube/bundles/cmake/4.2.3+st.1/bin/cmake.exe *)",
+      "Bash(cmd.exe *)",
+      "Bash(/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe *)",
+      "Bash(dir /B /S \"C:\\\\Users\\\\Admin\\\\Desktop\\\\PV-Robotics\\\\distributed-pv-auto-cleaner\\\\chassis\\\\software_stm32h743\\\\Core\")",
+      "Bash(dir *)"
+    ]
+  }
+}
