@@ -47,6 +47,16 @@ void motor_stop(void)
     HAL_GPIO_WritePin(EN1_24V_GPIO_Port, EN1_24V_Pin, GPIO_PIN_RESET);
 }
 
+void motor_update_raw(int16_t left_speed, int16_t right_speed)
+{
+    /* Linear mapping: int16 [-32768, 32767] -> PWM [-5999, 5999] */
+    int16_t left_pwm  = (int16_t)((int32_t)left_speed  * MOTOR_PWM_PERIOD / SERIAL_SPEED_MAX);
+    int16_t right_pwm = (int16_t)((int32_t)right_speed * MOTOR_PWM_PERIOD / SERIAL_SPEED_MAX);
+
+    set_motor(&htim1, TIM_CHANNEL_3, TIM_CHANNEL_1, left_pwm);
+    set_motor(&htim2, TIM_CHANNEL_3, TIM_CHANNEL_1, right_pwm);
+}
+
 void motor_update(uint16_t ch1_steer, uint16_t ch2_throttle)
 {
     int16_t steer    = (int16_t)ch1_steer - CRSF_CHANNEL_MID;

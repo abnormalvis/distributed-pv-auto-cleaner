@@ -49,6 +49,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/vofa.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/motor.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/can_io.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/serial_protocol.c
 )
 
 # Add include paths

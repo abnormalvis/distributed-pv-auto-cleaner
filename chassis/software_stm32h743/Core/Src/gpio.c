@@ -57,14 +57,14 @@ void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(POWER_5V_GPIO_Port, POWER_5V_Pin, GPIO_PIN_SET);
 
-  /*Configure GPIO pins : PCPin PCPin PCPin PCPin */
+  /*Configure GPIO pins : EN1_24V_Pin POWER_5V_Pin Motor1_EN_Pin Motor2_EN_Pin */
   GPIO_InitStruct.Pin = EN1_24V_Pin|POWER_5V_Pin|Motor1_EN_Pin|Motor2_EN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PtPin */
+  /*Configure GPIO pin : EN2_24V_Pin */
   GPIO_InitStruct.Pin = EN2_24V_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;

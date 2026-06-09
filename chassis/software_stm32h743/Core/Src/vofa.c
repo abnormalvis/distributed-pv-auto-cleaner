@@ -1,5 +1,5 @@
 #include "vofa.h"
-#include "usbd_cdc_if.h"
+#include "usart.h"
 #include <stdio.h>
 
 #define MAX_FRAME_SIZE 256
@@ -7,7 +7,7 @@
 static uint8_t send_buf[MAX_FRAME_SIZE];
 
 /**
- * @brief  Send CRSF channels as FireWater ASCII frame over USB CDC.
+ * @brief  Send CRSF channels as FireWater ASCII frame over USART1.
  * @note   FireWater ASCII format: ch0,ch1,...,chN\n
  *         VOFA+ auto-detects channel count from the first frame.
  */
@@ -24,5 +24,5 @@ void vofa_send_channels(const uint16_t *channels, uint8_t num_channels)
     }
     send_buf[len++] = '\n';
 
-    CDC_Transmit_HS(send_buf, (uint16_t)len);
+    usart1_debug_transmit(send_buf, (uint16_t)len);
 }

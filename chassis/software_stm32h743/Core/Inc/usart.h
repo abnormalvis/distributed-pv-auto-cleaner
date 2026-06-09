@@ -47,7 +47,7 @@ void MX_USART1_UART_Init(void);
 void MX_USART10_UART_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-
+void usart1_debug_transmit(const uint8_t *buf, uint16_t len);
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

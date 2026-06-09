@@ -32,7 +32,7 @@
 #include "motor.h"
 #include "usbd_core.h"
 #include "can_io.h"
-#include "usbd_cdc_if.h"
+#include "serial_protocol.h"
 #include <stdio.h>
 /* USER CODE END Includes */
 
@@ -54,7 +54,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-extern USBD_HandleTypeDef hUsbDeviceHS;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -74,6 +74,7 @@ void SystemClock_Config(void);
   */
 int main(void)
 {
+
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
@@ -108,6 +109,7 @@ int main(void)
   crsf_init();
   motor_init();
   can_io_init();
+  serial_protocol_init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -124,23 +126,19 @@ int main(void)
         last_tick = now;
         const crsf_data_t *rc = crsf_get_data();
 
-        if (crsf_is_connected()) {
+        /* Control priority: ROS2 serial > ELRS CRSF > Safe Stop */
+        if (serial_is_active()) {
+            /* --- ROS2 autonomous control (highest priority) --- */
+            const serial_cmd_t *cmd = serial_get_cmd();
+            motor_update_raw(cmd->left_rpm, cmd->right_rpm);
+        } else if (crsf_is_connected()) {
+            /* --- ELRS remote control (fallback) --- */
             motor_update(rc->channels[0], rc->channels[1]);
 
-            if (hUsbDeviceHS.dev_state == USBD_STATE_CONFIGURED) {
-                vofa_send_channels(rc->channels, 16);
-            }
+            vofa_send_channels(rc->channels, 16);
         } else {
+            /* --- No control source — safety stop --- */
             motor_stop();
-
-            if (hUsbDeviceHS.dev_state == USBD_STATE_CONFIGURED) {
-                static uint16_t t = 0;
-                t++;
-                uint16_t test[16];
-                test[0] = t % 1000;
-                for (uint8_t i = 1; i < 16; i++) test[i] = 0;
-                vofa_send_channels(test, 16);
-            }
         }
 
         /* CAN IO relay cycling: 4ch sequential, 2.5s each, 10s full cycle */
@@ -160,21 +158,19 @@ int main(void)
                 can_io_read_relay_status();
                 can_io_read_input_status();
 
-                if (hUsbDeviceHS.dev_state == USBD_STATE_CONFIGURED) {
-                    char buf[128];
-                    int len = sprintf(buf,
-                        "OUT:%d,%d,%d,%d IN:%d,%d,%d,%d\r\n",
-                        (can_io_relay_status >> 0) & 1,
-                        (can_io_relay_status >> 1) & 1,
-                        (can_io_relay_status >> 2) & 1,
-                        (can_io_relay_status >> 3) & 1,
-                        (can_io_input_status >> 0) & 1,
-                        (can_io_input_status >> 1) & 1,
-                        (can_io_input_status >> 2) & 1,
-                        (can_io_input_status >> 3) & 1);
-                    if (len > 0) {
-                        CDC_Transmit_HS((uint8_t*)buf, (uint16_t)len);
-                    }
+                char buf[128];
+                int len = sprintf(buf,
+                    "OUT:%d,%d,%d,%d IN:%d,%d,%d,%d\r\n",
+                    (can_io_relay_status >> 0) & 1,
+                    (can_io_relay_status >> 1) & 1,
+                    (can_io_relay_status >> 2) & 1,
+                    (can_io_relay_status >> 3) & 1,
+                    (can_io_input_status >> 0) & 1,
+                    (can_io_input_status >> 1) & 1,
+                    (can_io_input_status >> 2) & 1,
+                    (can_io_input_status >> 3) & 1);
+                if (len > 0) {
+                    usart1_debug_transmit((uint8_t*)buf, (uint16_t)len);
                 }
             }
         }
@@ -260,8 +256,7 @@ void Error_Handler(void)
   }
   /* USER CODE END Error_Handler_Debug */
 }
-
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.
