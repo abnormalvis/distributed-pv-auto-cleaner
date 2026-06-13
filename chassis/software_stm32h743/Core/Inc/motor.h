@@ -15,6 +15,7 @@ extern "C" {
 void motor_init(void);
 void motor_update(uint16_t ch1_steer, uint16_t ch2_throttle);
 void motor_update_raw(int16_t left_speed, int16_t right_speed);
+void motor_update_from_channels(const int16_t channels[6]);
 void motor_stop(void);
 
 #ifdef __cplusplus

@@ -24,6 +24,7 @@
  * ======================================================================== */
 
 static serial_cmd_t       s_cmd;                  /* parsed motor command */
+static serial_channels_t   s_channels;             /* parsed 6-channel command */
 static serial_parse_state_t s_state = SERIAL_PARSE_SYNC;
 static uint8_t            s_frame_buf[SERIAL_FRAME_SIZE];
 static uint8_t            s_data_idx;
@@ -74,6 +75,23 @@ static void dispatch_frame(uint8_t func, const uint8_t *data)
     case SERIAL_FUNC_SERVO:
         /* Servo command received — no servos on this chassis, ignore */
         break;
+    case SERIAL_FUNC_CHANNELS_1:
+        /* Channels 0-2: 3 × int16 BE in data[0..5], data[6..7] spare */
+        s_channels.channels[0] = i16_from_be(data[0], data[1]);
+        s_channels.channels[1] = i16_from_be(data[2], data[3]);
+        s_channels.channels[2] = i16_from_be(data[4], data[5]);
+        s_channels.last_frame_ms = HAL_GetTick();
+        /* Do NOT set fresh yet — wait for CHANNELS_2 */
+        break;
+    case SERIAL_FUNC_CHANNELS_2:
+        /* Channels 3-5: 3 × int16 BE in data[0..5], data[6..7] spare */
+        s_channels.channels[3] = i16_from_be(data[0], data[1]);
+        s_channels.channels[4] = i16_from_be(data[2], data[3]);
+        s_channels.channels[5] = i16_from_be(data[4], data[5]);
+        s_channels.fresh          = 1;
+        s_channels.last_frame_ms  = HAL_GetTick();
+        s_channels.valid_frames++;
+        break;
     default:
         /* Unknown or PC->MCU function — ignore */
         break;
@@ -90,6 +108,7 @@ static void dispatch_frame(uint8_t func, const uint8_t *data)
 void serial_protocol_init(void)
 {
     memset(&s_cmd, 0, sizeof(s_cmd));
+    memset(&s_channels, 0, sizeof(s_channels));
     s_state    = SERIAL_PARSE_SYNC;
     s_data_idx = 0;
     s_checksum = 0;
@@ -104,14 +123,32 @@ const serial_cmd_t *serial_get_cmd(void)
 }
 
 /**
- * @brief  Return 1 if valid motor frames were received within the timeout window.
+ * @brief  Return pointer to the parsed 6-channel command struct.
+ */
+const serial_channels_t *serial_get_channels(void)
+{
+    return &s_channels;
+}
+
+/**
+ * @brief  Return 1 if any valid command frame (motor or 6-channel) was received
+ *         within the timeout window.
  */
 uint8_t serial_is_active(void)
 {
-    if (s_cmd.valid_frames == 0) {
-        return 0;
+    uint32_t now = HAL_GetTick();
+    uint32_t motor_age    = now - s_cmd.last_frame_ms;
+    uint32_t channel_age  = now - s_channels.last_frame_ms;
+
+    /* Motor frames active? */
+    if (s_cmd.valid_frames > 0 && motor_age < SERIAL_TIMEOUT_MS) {
+        return 1;
     }
-    return (HAL_GetTick() - s_cmd.last_frame_ms) < SERIAL_TIMEOUT_MS;
+    /* 6-channel frames active? */
+    if (s_channels.valid_frames > 0 && channel_age < SERIAL_TIMEOUT_MS) {
+        return 1;
+    }
+    return 0;
 }
 
 /**

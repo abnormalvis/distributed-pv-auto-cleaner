@@ -126,23 +126,32 @@ int main(void)
         last_tick = now;
         const crsf_data_t *rc = crsf_get_data();
 
-        /* Control priority: ROS2 serial > ELRS CRSF > Safe Stop */
-        if (serial_is_active()) {
-            /* --- ROS2 autonomous control (highest priority) --- */
-            const serial_cmd_t *cmd = serial_get_cmd();
-            motor_update_raw(cmd->left_rpm, cmd->right_rpm);
-        } else if (crsf_is_connected()) {
-            /* --- ELRS remote control (fallback) --- */
-            motor_update(rc->channels[0], rc->channels[1]);
+        /* Control priority: ROS2 6ch > ROS2 motor > ELRS CRSF > Safe Stop */
+        {
+            const serial_channels_t *ch = serial_get_channels();
+            if (serial_is_active() && ch->fresh) {
+                /* --- ROS2 6-channel autonomous control (highest priority) --- */
+                motor_update_from_channels(ch->channels);
+                /* Clear fresh flag — will be set again when next CHANNELS_2 arrives */
+                ((serial_channels_t *)ch)->fresh = 0;
+            } else if (serial_is_active()) {
+                /* --- ROS2 legacy motor RPM control --- */
+                const serial_cmd_t *cmd = serial_get_cmd();
+                motor_update_raw(cmd->left_rpm, cmd->right_rpm);
+            } else if (crsf_is_connected()) {
+                /* --- ELRS remote control (fallback) --- */
+                motor_update(rc->channels[0], rc->channels[1]);
 
-            vofa_send_channels(rc->channels, 16);
-        } else {
-            /* --- No control source — safety stop --- */
-            motor_stop();
+                vofa_send_channels(rc->channels, 16);
+            } else {
+                /* --- No control source — safety stop --- */
+                motor_stop();
+            }
         }
 
-        /* CAN IO relay cycling: 4ch sequential, 2.5s each, 10s full cycle */
-        {
+        /* CAN IO relay cycling: only when serial is NOT active
+         * (6-channel control overrides relay outputs via motor_update_from_channels) */
+        if (!serial_is_active()) {
             static uint32_t relay_tick = 0;
             static uint32_t status_tick = 0;
             static uint8_t  phase = 0;

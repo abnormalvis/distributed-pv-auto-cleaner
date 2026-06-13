@@ -13,9 +13,9 @@
  *   Byte 11:     Footer (0xDF)
  *
  * PC-to-MCU functions:
- *   0x06 MOTOR  â€? 4x int16 RPM (we use only first 2 for tracked chassis)
- *   0x07 PID    â€? 3x uint16 Kp, Ki, Kd
- *   0x08 SERVO  â€? 2x uint8 angle
+ *   0x06 MOTOR  ï¿½? 4x int16 RPM (we use only first 2 for tracked chassis)
+ *   0x07 PID    ï¿½? 3x uint16 Kp, Ki, Kd
+ *   0x08 SERVO  ï¿½? 2x uint8 angle
  */
 
 #ifndef __SERIAL_PROTOCOL_H__
@@ -42,6 +42,8 @@ extern "C" {
 #define SERIAL_FUNC_MOTOR        0x06U   /* PC->MCU: 4x RPM (int16)        */
 #define SERIAL_FUNC_PID          0x07U   /* PC->MCU: 3x PID (uint16)       */
 #define SERIAL_FUNC_SERVO        0x08U   /* PC->MCU: 2x servo (uint8)      */
+#define SERIAL_FUNC_CHANNELS_1   0x09U   /* PC->MCU: channels 0-2 (3x i16) */
+#define SERIAL_FUNC_CHANNELS_2   0x0AU   /* PC->MCU: channels 3-5 (3x i16) */
 
 /* === Timing === */
 #define SERIAL_TIMEOUT_MS         300U   /* 3x the 100 Hz ROS2 cycle */
@@ -65,9 +67,18 @@ typedef struct {
     uint32_t error_count;      /* CRC/footer mismatch count                */
 } serial_cmd_t;
 
+/* === 6-channel command (func 0x09 + 0x0A) === */
+typedef struct {
+    int16_t  channels[6];       /* ch[0..5], PWM 1000-2000, center=1500     */
+    uint8_t  fresh;             /* set to 1 when a complete pair arrives     */
+    uint32_t last_frame_ms;     /* systick of last valid CHANNELS_2 frame    */
+    uint32_t valid_frames;      /* total successfully-parsed channel pairs   */
+} serial_channels_t;
+
 /* === API === */
 void              serial_protocol_init(void);
-const serial_cmd_t *serial_get_cmd(void);
+const serial_cmd_t       *serial_get_cmd(void);
+const serial_channels_t  *serial_get_channels(void);
 uint8_t           serial_is_active(void);
 void              serial_parse_byte(uint8_t byte);
 
